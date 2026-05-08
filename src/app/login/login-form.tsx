@@ -2,13 +2,15 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase'
 
 export default function LoginForm() {
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const supabase = createClient()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -16,18 +18,16 @@ export default function LoginForm() {
     setError(false)
 
     try {
-      const res = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       })
 
-      if (res.ok) {
-        const data = await res.json()
-        document.cookie = `crm_session=${data.token}; path=/; max-age=${60*60*24*7}`
-        router.push('/dashboard')
-      } else {
+      if (authError) {
         setError(true)
+      } else if (data.user) {
+        // Success - redirect to dashboard
+        router.push('/dashboard')
       }
     } catch {
       setError(true)
@@ -44,11 +44,11 @@ export default function LoginForm() {
         
         <form onSubmit={handleSubmit}>
           <input
-            type="text"
+            type="email"
             className="input"
-            placeholder="Имя пользователя"
-            value={username}
-            onChange={(e) => { setUsername(e.target.value); setError(false); }}
+            placeholder="Email"
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); setError(false); }}
             required
           />
           <input
@@ -69,7 +69,7 @@ export default function LoginForm() {
           </button>
         </form>
         
-        {error && <p className="login-error">Неверное имя пользователя или пароль</p>}
+        {error && <p className="login-error">Неверный email или пароль</p>}
       </div>
     </div>
   )
